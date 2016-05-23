@@ -14,19 +14,23 @@
         margin: 0;
       }
     </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.js"></script>    
+	
+	
     <link rel="stylesheet" href="https://www.nps.gov/lib/npmap.js/3.0.15/npmap.css" />
-    <script src="npmap.js"></script>    
-    <script src="jquery-csv.js"></script>
-    <script src="loadcuva.js"></script>
-    <style>
+	
+	<style>
         .npmap .leaflet-popup-content {
             font-size: 14px;
             margin: 15px;
             width: 250px !important;
-        }
+    }
     </style>
+	
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.js"></script>    
+    <script src="npmap.js"></script>    
+    <script src="jquery-csv.js"></script>
+    <script src="loadgtfs.js"></script>
+
     
   </head>
   <body>
@@ -34,7 +38,28 @@
 
     <script type="text/javascript"> 
         var map = L.npmap.map({div:'map', fullscreenControl: true}).setView([41.242247, -81.549109], 13);
-        LoadCuva(map);
+		
+		var toLoad = getParameterByName('parkId');
+		if (toLoad === 'boha') {
+			map.setView([42.30575300304638, -71.0185432434082], 12);
+			LoadBoha(map);
+		}
+		else if (toLoad === 'romo') {
+			map.setView([40.347786999083404, -105.6277084350586], 13);
+			LoadRomo(map);
+		}
+		else
+			LoadCuva(map);
+		
+	function getParameterByName(name, url) {
+		if (!url) url = window.location.href;
+		name = name.replace(/[\[\]]/g, "\\$&");
+		var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+		if (!results) return null;
+		if (!results[2]) return '';
+		return decodeURIComponent(results[2].replace(/\+/g, " "));
+	}
     </script>
   </body>
 </html>
