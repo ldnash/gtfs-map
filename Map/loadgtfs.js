@@ -1,11 +1,3 @@
-//http://leafletjs.com/reference.html#icon
-	var MyIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-	
 var ShowRouteByDefault = true;
 
 // Global object to hold references to each polyline
@@ -23,6 +15,10 @@ function LoadCSV(url) {
 	return deferred;
 }
 
+// Keep track of whether or not we created a legend already
+// This allows us to load multiple GTFS feeds without multiple legends/date selectors
+var legendCreated = false;
+
 // Load the Rocky Mountain GTFS
 function LoadRomo(map) {
 	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stops.txt");
@@ -33,13 +29,6 @@ function LoadRomo(map) {
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar_dates.txt");
 	
-	// Set the icon which will be used
-	MyIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
 }
 
@@ -53,14 +42,6 @@ function LoadCuva(map) {
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar_dates.txt");
 	
-	// Set the icon which will be used
-	MyIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
-		//iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/rr-xing-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
 }
 
@@ -74,13 +55,17 @@ function LoadBoha(map) {
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar_dates.txt");
 	
-	// Set the icon which will be used
-	MyIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/boat-tour-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
+}
+
+function LoadEstes(map) {
+	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/stops.txt");
+	var deferredTime     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/stop_times.txt");
+	var deferredTrips    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/trips.txt");
+	var deferredShapes   = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/shapes.txt");
+	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/routes.txt");
+	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar.txt");
+	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar_dates.txt");
 	
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
 }
@@ -106,11 +91,15 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		var calenderData = $.csv.toObjects(calenderCsv[0]);
 		var datesData    = $.csv.toObjects(datesCsv[0]);
 		
+		var myIcon = selectIcon(routeData[0].route_type);
+		
 		// Create dictionaries to allow quick lookup by ID
 		var sortedShapes = groupBy(shapeData, 'shape_id');
 		var sortedTrips  = groupBy(tripData, 'route_id');
 		var tripById     = groupBy(tripData, 'trip_id');
 		var routeById    = groupBy(routeData, 'route_id');
+		
+		var lineColor = "#d39800";
 		
 		// Draw shapes (polylines) for each route
 		for(var routeId in sortedTrips) {
@@ -120,7 +109,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				if (routeData[i].route_id === routeId) { routeInfo = routeData[i]; break; }
 			}
 			// Set line color to the default
-			var lineColor = "#d39800";
+			
 			// Use styling data from route instead, if it exists
 			if (routeInfo.route_color) {
 				lineColor = "#" + routeInfo.route_color;
@@ -184,10 +173,10 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				}
 			}
 		});
-	
+		
 		// Create our markers with popups
 		stopData.forEach(function (stop) {
-			var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: MyIcon}).addTo(map);
+			var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon}).addTo(map);
 			// Get only the times for this stop
 			var releventTimes = timeData.filter(function (time) {
 				return stop.stop_id === time.stop_id;
@@ -203,6 +192,13 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				}
 			});
 			
+			// Sort the time listings
+			for(var routeId in timesByRoute) {
+				timesByRoute[routeId].sort(function (a, b) {
+					return new Date('1970/01/01 ' + a.departure_time) - new Date('1970/01/01 ' + b.departure_time);
+				});
+			}
+			
 			var optionsString = "";
 			var notEmpty = false;
 			for (var routeId in timesByRoute) {
@@ -212,23 +208,89 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 
 			var popupStr = "<h1>" + stop.stop_name + "</h1><br>";
 			if (!notEmpty) {
-				popupStr = popupStr + "No departures scheduled for this stop";
+				popupStr += "No departures scheduled for this stop";
 			} else {
-				popupStr = popupStr + "<select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
-				popupStr = popupStr + "</select><br><br>";
+				popupStr += "<select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
+				popupStr += "</select><br><br>";
 			}
-			routeData.forEach(function(route) {
+			routeData.forEach(function(route) {	
 				if (timesByRoute[route.route_id]) {
-					popupStr = popupStr + "<div id = \"" + route.route_id + "div\" style = \"display : none\">"
-					popupStr = popupStr + "<b>Scheduled Departures</b><br><br><ul>";
+					popupStr += "<div id = \"" + route.route_id + "div\" style = \"display : none\">"
+					popupStr += "<b>Scheduled Departures</b><br><br>";
+					var direction0String = "";
+					var headsign0 = "Outbound";
+					var direction1String = "";
+					var headsign1 = "Inbound";
 					timesByRoute[route.route_id].forEach(function(time) {
-						popupStr = popupStr + "<li>" + parseTime(time.departure_time) + "</li>";
+						var trip = tripById[time.trip_id][0];
+						if (trip.direction_id === '1') {
+							direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+							if (!trip.trip_headsign == "") {
+								headsign1 = trip.trip_headsign;
+							}
+						} else {
+							direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+							if (!trip.trip_headsign == "") {
+								headsign0 = trip.trip_headsign;
+							}
+						}
 					});
-					popupStr = popupStr + "</ul></div>";
+					var table = "<table><tr width : 250px>";
+					var tableR1 = "<tr width : 250px>";
+					var tableR2 = "<tr width : 250px>";
+					if (direction0String != "") {
+						tableR1 += "<td width : 125px><b>" + headsign0 + "</b></td>";
+						tableR2 += "<td width : 125px><ul>" + direction0String + "</ul></td>";
+					}
+					if (direction1String != "") {
+						tableR1 += "<td width : 125px><b>" + headsign1 + "</b></td>";
+						tableR2 += "<td width : 125px><ul>" + direction1String + "</ul></td>";
+					}
+					table += tableR1 + "</tr>" + tableR2 + "</tr></table>";
+					popupStr += table + "</div>";
 				}
 			});
 			marker.bindPopup(popupStr);
 		});
+		
+		
+		
+		if (!legendCreated) {
+			legendCreated = true;
+			var legend = L.control({position: 'topright' });
+			legend.onAdd = function (map) {
+				var div = L.DomUtil.create('div', 'info legend');
+				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
+				$(div).attr('id', 'legendContainer');
+				div.innerHTML += '<table><tr>' + '<td><img src="' + myIcon.options.iconUrl + 
+					'" height="32px" width="32px" alt="Transit Stop Icon"/></td>' + '<td><p style="{float: right}">Transit Stop</p></td></tr>' 
+					+ '<tr><td><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr></table>';
+				return div;
+			}
+			legend.addTo(map);
+			
+			var dateSelect = L.control({position: 'bottomright'});
+			dateSelect.onAdd = function (map) {
+				var div = L.DomUtil.create('div', 'dpick');
+				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
+				div.innerHTML += '<p>Select a Date</p><input type="text" id="datepicker"><br><button type="button" style="margin-top: 5px;" id="showschedule">Show Schedule</button>';
+				return div;
+			}
+		
+			dateSelect.addTo(map);
+			$('#datepicker').datepicker().datepicker('setDate', date);
+		
+			$('#showschedule').click(function(event) {
+				var dateToShow = $('#datepicker').datepicker("getDate");
+				var parkId = getParameterByName('parkId');
+				var url = getPathFromUrl(window.location.href);
+				url += '?';
+				if (parkId && parkId != "")
+					url += 'parkId=' + parkId + '&'
+				url += 'date=' + dateToShow.yyyymmdd();
+				window.location.href = url;
+			});
+		}
 	});
 	
 	// Pan to popups when they open, and bind js to the dropdown
@@ -251,14 +313,13 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 					toShow.attr('style', '');
 				}
 				
-				var highlight = getParameterByName('highlight');
 				// Hide/show routes if necessary
-				if (!ShowRouteByDefault || stringToBoolean(highlight)) {
+				//if (!ShowRouteByDefault || stringToBoolean(highlight)) {
 					for (var routeId in PolylinesById) {
 						map.removeLayer(PolylinesById[routeId]);
 					}
 					map.addLayer(PolylinesById[selected]);
-				}
+				//}
 			});
 			// Pan to popup
 			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
@@ -277,6 +338,53 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			}
 		}
 	});
+}
+
+// Icons for each type of transportation
+
+//var streetcarIcon;
+//var subwayIcon;
+var railIcon = L.icon({
+		iconUrl: '../Images/rail.svg',
+		iconSize: [32, 32],
+		iconAnchor: [16, 0],
+		popupAnchor: [0, 0]
+	});
+	
+var busIcon = L.icon({
+		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
+		iconSize: [32, 32],
+		iconAnchor: [16, 0],
+		popupAnchor: [0, 0]
+	});
+	
+var ferryIcon = L.icon({
+		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/boat-tour-black-32.png',
+		iconSize: [32, 32],
+		iconAnchor: [16, 0],
+		popupAnchor: [0, 0]
+	});
+	
+var defaultIcon = L.icon({
+		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
+		iconSize: [32, 32],
+		iconAnchor: [16, 0],
+		popupAnchor: [0, 0]
+	});
+//var cablecarIcon;
+//var gondolaIcon;
+//var finicularIcon;
+
+function selectIcon(routeType) {
+	if (routeType) {
+		if (routeType === '2')
+			return railIcon;
+		if (routeType === '3')
+			return busIcon;
+		if (routeType === '4')
+			return ferryIcon;
+	}
+	return defaultIcon;
 }
 
 // Helper functions
@@ -301,6 +409,7 @@ Date.prototype.yyyymmdd = function() {
 	var suffix = "A.M.";
 	var hours = parseInt(time[0]);
 	if (hours > 12) { hours = hours - 12; suffix = "P.M.";}
+	if (hours == 0) {hours = 12;}
 	return hours.toString() + ":" + time[1] + " " + suffix;
  }
 
@@ -340,6 +449,10 @@ function groupBy(arr, property) {
     memo[x[property]].push(x);
     return memo;
   }, {});
+}
+
+function getPathFromUrl(url) {
+  return url.split("?")[0];
 }
 
 function stringToBoolean(string){

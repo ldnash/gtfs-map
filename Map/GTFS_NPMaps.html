@@ -15,14 +15,15 @@
       }
     </style>
 	
-	
     <link rel="stylesheet" href="https://www.nps.gov/lib/npmap.js/3.0.15/npmap.css" />
+	<link rel="stylesheet" href="jqueryui/jquery-ui.min.css">
 	
 	<style>
         .npmap .leaflet-popup-content {
             font-size: 14px;
             margin: 15px;
-            width: 250px !important;
+            min-width: 250px !important;
+			max-height: 300px !important;
     }
     </style>
 	
@@ -30,7 +31,7 @@
     <script src="npmap.js"></script>    
     <script src="jquery-csv.js"></script>
     <script src="loadgtfs.js"></script>
-
+	<script src="jqueryui/jquery-ui.min.js"></script>
     
   </head>
   <body>
@@ -47,6 +48,7 @@
 		else if (toLoad === 'romo') {
 			map.setView([40.347786999083404, -105.6277084350586], 13);
 			LoadRomo(map);
+			LoadEstes(map);
 		}
 		else
 			LoadCuva(map);
