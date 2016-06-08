@@ -1,7 +1,12 @@
+//Mobile
+//If only one, show no dropdown
+
 var ShowRouteByDefault = true;
 
 // Global object to hold references to each polyline
 var PolylinesById = new Object();
+
+var clusterRadius = 80;
 
 function LoadCSV(url) {
 		var deferred = $.ajax({
@@ -54,6 +59,7 @@ function LoadBoha(map) {
 	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/routes.txt");
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar_dates.txt");
+	clusterRadius = 20;
 	
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
 }
@@ -175,8 +181,12 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		});
 		
 		// Create our markers with popups
+		var markerLayer = L.markerClusterGroup({
+			maxClusterRadius : clusterRadius,
+		});
+		console.log(markerLayer);
 		stopData.forEach(function (stop) {
-			var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon}).addTo(map);
+			var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
 			// Get only the times for this stop
 			var releventTimes = timeData.filter(function (time) {
 				return stop.stop_id === time.stop_id;
@@ -251,8 +261,9 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				}
 			});
 			marker.bindPopup(popupStr);
+			markerLayer.addLayer(marker);
 		});
-		
+		map.addLayer(markerLayer);
 		
 		
 		if (!legendCreated) {
@@ -273,15 +284,14 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			dateSelect.onAdd = function (map) {
 				var div = L.DomUtil.create('div', 'dpick');
 				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
-				div.innerHTML += '<p>Select a Date</p><input type="text" id="datepicker"><br><button type="button" style="margin-top: 5px;" id="showschedule">Show Schedule</button>';
+				div.innerHTML += '<p>Select a Date</p><input type="text" id="datepicker">';
 				return div;
 			}
 		
 			dateSelect.addTo(map);
-			$('#datepicker').datepicker().datepicker('setDate', date);
-		
-			$('#showschedule').click(function(event) {
-				var dateToShow = $('#datepicker').datepicker("getDate");
+			$('#datepicker').datepicker({
+				onSelect: function (date) {
+					var dateToShow = $('#datepicker').datepicker("getDate");
 				var parkId = getParameterByName('parkId');
 				var url = getPathFromUrl(window.location.href);
 				url += '?';
@@ -289,7 +299,8 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 					url += 'parkId=' + parkId + '&'
 				url += 'date=' + dateToShow.yyyymmdd();
 				window.location.href = url;
-			});
+				},
+			}).datepicker('setDate', date);
 		}
 	});
 	
@@ -321,7 +332,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 					map.addLayer(PolylinesById[selected]);
 				//}
 			});
-			// Pan to popup
+			// Pan to popup; this doesn't work if we load multiple feeds
 			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
 			px.y -= e.popup._container.clientHeight/2; // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
 			map.panTo(map.unproject(px),{animate: true}); // pan to new center
@@ -408,8 +419,10 @@ Date.prototype.yyyymmdd = function() {
 	var time = timeStr.split(":");
 	var suffix = "A.M.";
 	var hours = parseInt(time[0]);
-	if (hours > 12) { hours = hours - 12; suffix = "P.M.";}
+	if (hours >=24) {hours = hours - 24};
+	if (hours > 12 && hours < 24) { hours = hours - 12; suffix = "P.M.";}
 	if (hours == 0) {hours = 12;}
+	if (hours == 12) {suffix = "P.M.";}
 	return hours.toString() + ":" + time[1] + " " + suffix;
  }
 

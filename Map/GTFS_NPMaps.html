@@ -4,6 +4,9 @@
     <title>NPS GTFS Test Map</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
     <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+	<!-- This line ensures it will work in IE" -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge;" />
+
     <link rel="shortcut icon" href="http://cartodb.com/assets/favicon.ico" />
     
     <!-- Map takes up full browser window -->
@@ -17,6 +20,8 @@
 	
     <link rel="stylesheet" href="https://www.nps.gov/lib/npmap.js/3.0.15/npmap.css" />
 	<link rel="stylesheet" href="jqueryui/jquery-ui.min.css">
+	<link rel="stylesheet" href="leafletmarkercluster/MarkerCluster.css" />
+	<link rel="stylesheet" href="leafletmarkercluster/MarkerCluster.Default.css" />
 	
 	<style>
         .npmap .leaflet-popup-content {
@@ -32,6 +37,7 @@
     <script src="jquery-csv.js"></script>
     <script src="loadgtfs.js"></script>
 	<script src="jqueryui/jquery-ui.min.js"></script>
+	<script src="leafletmarkercluster/leaflet.markercluster-src.js"></script>
     
   </head>
   <body>
