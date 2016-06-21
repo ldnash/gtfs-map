@@ -33,8 +33,9 @@ function LoadRomo(map) {
 	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/routes.txt");
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar_dates.txt");
+	var deferredFreq     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/frequencies.txt");
 	
-	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
 }
 
 // Load the Cuyahoga Valley GTFS
@@ -47,7 +48,7 @@ function LoadCuva(map) {
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar_dates.txt");
 	
-	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, null);
 }
 
 // Load the Boston Harbor Islands GTFS
@@ -61,7 +62,7 @@ function LoadBoha(map) {
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar_dates.txt");
 	clusterRadius = 20;
 	
-	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, null);
 }
 
 function LoadEstes(map) {
@@ -72,13 +73,14 @@ function LoadEstes(map) {
 	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/routes.txt");
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar_dates.txt");
+	var deferredFreq     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/frequencies.txt");
 	
-	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates);
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
 }
 	
 	
 // Given deferred objects to return the indicated CSV files, populates the map
-function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates) {
+function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq) {
 	
 	// Determine if we should show all routes on load, or only when one is selected
 	var showRouteInput = getParameterByName('showRoutesByDefault');
@@ -87,7 +89,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		ShowRouteByDefault = stringToBoolean(showRouteInput);
 	}
 	
-	$.when(deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates).then(function(stopCsv, timesCsv, tripCsv, shapeCsv, routeCsv, calenderCsv, datesCsv) {
+	$.when(deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq).then(function(stopCsv, timesCsv, tripCsv, shapeCsv, routeCsv, calenderCsv, datesCsv, freqCsv) {
 		// Convert the csv data into arrays of objects using jquery-csv
 		var stopData     = $.csv.toObjects(stopCsv[0]);
 		var timeData     = $.csv.toObjects(timesCsv[0]);
@@ -97,6 +99,14 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		var calenderData = $.csv.toObjects(calenderCsv[0]);
 		var datesData    = $.csv.toObjects(datesCsv[0]);
 		
+		var freqData;
+		var freqByTrip;
+		if (freqCsv != null) {
+			freqData = $.csv.toObjects(freqCsv[0]);
+			freqByTrip = groupBy(freqData, 'trip_id');
+			console.log("foo", freqByTrip);
+		}
+		
 		var myIcon = selectIcon(routeData[0].route_type);
 		
 		// Create dictionaries to allow quick lookup by ID
@@ -104,6 +114,9 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		var sortedTrips  = groupBy(tripData, 'route_id');
 		var tripById     = groupBy(tripData, 'trip_id');
 		var routeById    = groupBy(routeData, 'route_id');
+		
+		// Sort stops by parent_id, so we can cluster them into one marker
+		var stopsByParent = groupBy(stopData, 'parent_station');
 		
 		var lineColor = "#d39800";
 		
@@ -184,87 +197,157 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		var markerLayer = L.markerClusterGroup({
 			maxClusterRadius : clusterRadius,
 		});
-		console.log(markerLayer);
+		
 		stopData.forEach(function (stop) {
-			var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
-			// Get only the times for this stop
-			var releventTimes = timeData.filter(function (time) {
-				return stop.stop_id === time.stop_id;
-			});
-			
-			var timesByRoute = new Object();
-			releventTimes.forEach(function(time) {
-				// Get the trip; trip_id is unique in the dataset, so we can just get the one at index 0
-				var trip = tripById[time.trip_id][0];
-				if (contains(runningServices, trip.service_id)) {
-					if (!timesByRoute[trip.route_id]) {timesByRoute[trip.route_id] = [];}
-					timesByRoute[trip.route_id].push(time);
-				}
-			});
-			
-			// Sort the time listings
-			for(var routeId in timesByRoute) {
-				timesByRoute[routeId].sort(function (a, b) {
-					return new Date('1970/01/01 ' + a.departure_time) - new Date('1970/01/01 ' + b.departure_time);
-				});
-			}
-			
-			var optionsString = "";
-			var notEmpty = false;
-			for (var routeId in timesByRoute) {
-				notEmpty = true;
-				optionsString = optionsString + "<option value = \"" + routeId + "\">" + routeById[routeId][0].route_long_name + "</option>";
-			}
-
-			var popupStr = "<h1>" + stop.stop_name + "</h1><br>";
-			if (!notEmpty) {
-				popupStr += "No departures scheduled for this stop";
-			} else {
-				popupStr += "<select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
-				popupStr += "</select><br><br>";
-			}
-			routeData.forEach(function(route) {	
-				if (timesByRoute[route.route_id]) {
-					popupStr += "<div id = \"" + route.route_id + "div\" style = \"display : none\">"
-					popupStr += "<b>Scheduled Departures</b><br><br>";
-					var direction0String = "";
-					var headsign0 = "Outbound";
-					var direction1String = "";
-					var headsign1 = "Inbound";
-					timesByRoute[route.route_id].forEach(function(time) {
-						var trip = tripById[time.trip_id][0];
-						if (trip.direction_id === '1') {
-							direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
-							if (!trip.trip_headsign == "") {
-								headsign1 = trip.trip_headsign;
-							}
-						} else {
-							direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
-							if (!trip.trip_headsign == "") {
-								headsign0 = trip.trip_headsign;
-							}
-						}
+			// If a stop has a parent, we will show its times under the station
+			if (stop.parent_station == "" || !stop.parent_station) {
+				var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
+				// Get only the times for this stop
+				var releventTimes = [];
+				// If this stop is a station, get the times for its children as well
+				if (stop.location_type == '1') {
+					var childStops = stopsByParent[stop.stop_id];
+					childStops.forEach(function (childStop) {
+						releventTimes = releventTimes.concat(timeData.filter(function (time) {
+							return childStop.stop_id === time.stop_id && time.pickup_type != '1';
+						}));
 					});
-					var table = "<table><tr width : 250px>";
-					var tableR1 = "<tr width : 250px>";
-					var tableR2 = "<tr width : 250px>";
-					if (direction0String != "") {
-						tableR1 += "<td width : 125px><b>" + headsign0 + "</b></td>";
-						tableR2 += "<td width : 125px><ul>" + direction0String + "</ul></td>";
-					}
-					if (direction1String != "") {
-						tableR1 += "<td width : 125px><b>" + headsign1 + "</b></td>";
-						tableR2 += "<td width : 125px><ul>" + direction1String + "</ul></td>";
-					}
-					table += tableR1 + "</tr>" + tableR2 + "</tr></table>";
-					popupStr += table + "</div>";
 				}
-			});
-			marker.bindPopup(popupStr);
-			markerLayer.addLayer(marker);
+				releventTimes = releventTimes.concat(timeData.filter(function (time) {
+					return stop.stop_id === time.stop_id && time.pickup_type != '1';
+				}));
+				
+				var timesByRoute = new Object();
+				releventTimes.forEach(function(time) {
+					// Get the trip; trip_id is unique in the dataset, so we can just get the one at index 0
+					var trip = tripById[time.trip_id][0];
+					if (contains(runningServices, trip.service_id)) {
+						if (!timesByRoute[trip.route_id]) {timesByRoute[trip.route_id] = [];}
+						timesByRoute[trip.route_id].push(time);
+					}
+				});
+				
+				// Sort the time listings
+				for(var routeId in timesByRoute) {
+					timesByRoute[routeId].sort(function (a, b) {
+						return new Date('1970/01/01 ' + a.departure_time) - new Date('1970/01/01 ' + b.departure_time);
+					});
+				}
+				
+				// If a stop has only one route, we don't want to show a dropdown
+				var singleRoute = (1 == Object.keys(timesByRoute).length);
+				var optionsString = "";
+				var popupStr = "<h1>" + stop.stop_name + "</h1><br>";
+				var notEmpty = false;
+				
+				if (!singleRoute) {
+					for (var routeId in timesByRoute) {
+						notEmpty = true;
+						optionsString = optionsString + "<option value = \"" + routeId + "\">" + routeById[routeId][0].route_long_name + "</option>";
+					}
+				} else {
+					popupStr += "<p>" + routeById[Object.keys(timesByRoute)[0]][0].route_long_name + "</p><br>";
+				}
+
+				
+				if (!notEmpty && !singleRoute) {
+					popupStr += "No departures scheduled for this stop";
+				} else if (!singleRoute) {
+					popupStr += "<select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
+					popupStr += "</select><br><br>";
+				}
+				routeData.forEach(function(route) {
+					var freqTripsShown = new Object();
+					if (timesByRoute[route.route_id]) {
+						// Only hide if we have multiple routes
+						if (!singleRoute) {
+							popupStr += "<div id = \"" + route.route_id + "div\" style = \"display : none\">"
+						} else {
+							popupStr += "<div id = \"" + route.route_id + "div\">"
+						}
+						popupStr += "<b>Scheduled Departures</b><br><br>";
+							var direction0String = "";
+							var headsign0 = "";
+							var direction1String = "";
+							var headsign1 = "";
+							// If we have stop headsigns instead of trip headsigns, sort by those
+							if (timesByRoute[route.route_id][0].stop_headsign && timesByRoute[route.route_id][0].stop_headsign != "") {
+								timesByRoute[route.route_id].forEach(function(time) {
+									if (headsign0 == "")
+										headsign0 = time.stop_headsign;
+									if (headsign1 == "" && headsign0 != time.stop_headsign)
+										headsign1 = time.stop_headsign;
+									if (headsign1 == time.stop_headsign) {
+										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+										if (freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+											freqByTrip[time.trip_id].forEach(function(freq) {
+												direction1String += "<li>Scheduled trips every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											});
+											freqTripsShown[time.trip_id] = "";
+										}
+									}
+									else if (headsign0 == time.stop_headsign) {
+										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+										if (freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+											freqByTrip[time.trip_id].forEach(function(freq) {
+												direction0String += "<li>Scheduled trips every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											});
+											freqTripsShown[time.trip_id] = "";
+										}
+									}
+									else
+										console.log("ERROR: Entry has no stop headsign", time);
+								});
+							} else {
+								timesByRoute[route.route_id].forEach(function(time) {
+									var trip = tripById[time.trip_id][0];
+									if (trip.direction_id === '1') {
+										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+										if (freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+											freqByTrip[time.trip_id].forEach(function(freq) {
+												direction1String += "<li>Scheduled trips every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											});
+											freqTripsShown[time.trip_id] = "";
+										}
+										if (!trip.trip_headsign == "") {
+											headsign1 = trip.trip_headsign;
+										}
+									} else {
+										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+										if (freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+											freqByTrip[time.trip_id].forEach(function(freq) {
+												direction0String += "<li>Scheduled trips every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											});
+											freqTripsShown[time.trip_id] = "";
+										}
+										if (!trip.trip_headsign == "") {
+											headsign0 = trip.trip_headsign;
+										}
+									}
+								});
+							}
+						
+						var table = "<table><tr width : 250px>";
+						var tableR1 = "<tr width : 250px>";
+						var tableR2 = "<tr width : 250px>";
+						if (direction0String != "") {
+							tableR1 += "<td width : 125px><b>" + headsign0 + "</b></td>";
+							tableR2 += "<td width : 125px><ul>" + direction0String + "</ul></td>";
+						}
+						if (direction1String != "") {
+							tableR1 += "<td width : 125px><b>" + headsign1 + "</b></td>";
+							tableR2 += "<td width : 125px><ul>" + direction1String + "</ul></td>";
+						}
+						table += tableR1 + "</tr>" + tableR2 + "</tr></table>";
+						popupStr += table + "</div>";
+						}
+					
+				});
+				marker.bindPopup(popupStr);
+				markerLayer.addLayer(marker);
+			}
 		});
 		map.addLayer(markerLayer);
-		
 		
 		if (!legendCreated) {
 			legendCreated = true;
@@ -424,6 +507,27 @@ Date.prototype.yyyymmdd = function() {
 	if (hours == 0) {hours = 12;}
 	if (hours == 12) {suffix = "P.M.";}
 	return hours.toString() + ":" + time[1] + " " + suffix;
+ }
+ 
+ function parseHeadwaySecs(secs) {
+	var string = "";
+	if (secs >= 3600) {
+		var numHours = secs / 3600;
+		secs = secs % 3600;
+		console.log(secs);
+		string += numHours;
+		if (numHours == 1)
+			string += " hour"
+		else 
+			string += " hours";
+		if (secs != 0 && secs > 60)
+			string += " and "
+		else
+			return string;
+	}
+	var numMinutes = secs/60;
+	string += numMinutes + " minutes"
+	return string;
  }
 
   
