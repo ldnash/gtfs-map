@@ -265,71 +265,73 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 							popupStr += "<div id = \"" + route.route_id + "div\">"
 						}
 						popupStr += "<b>Scheduled Departures</b><br><br>";
-							var direction0String = "";
-							var headsign0 = "";
-							var direction1String = "";
-							var headsign1 = "";
-							// If we have stop headsigns instead of trip headsigns, sort by those
-							if (timesByRoute[route.route_id][0].stop_headsign && timesByRoute[route.route_id][0].stop_headsign != "") {
-								timesByRoute[route.route_id].forEach(function(time) {
-									if (headsign0 == "")
-										headsign0 = time.stop_headsign;
-									if (headsign1 == "" && headsign0 != time.stop_headsign)
-										headsign1 = time.stop_headsign;
-									if (headsign1 == time.stop_headsign) {
-										if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
-											freqByTrip[time.trip_id].forEach(function(freq) {
-												direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
-											});
-											freqTripsShown[time.trip_id] = "";
-										} else {
-											direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
-										}
-									}
-									else if (headsign0 == time.stop_headsign) {
-										
-										if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
-											freqByTrip[time.trip_id].forEach(function(freq) {
-												direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
-											});
-											freqTripsShown[time.trip_id] = "";
-										} else {
-											direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
-										}
-									}
-									else
-										console.log("ERROR: Entry has no stop headsign", time);
-								});
-							} else {
-								timesByRoute[route.route_id].forEach(function(time) {
-									var trip = tripById[time.trip_id][0];
-									if (trip.direction_id === '1') {
-										if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
-											freqByTrip[time.trip_id].forEach(function(freq) {
-												direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
-											});
-											freqTripsShown[time.trip_id] = "";
-										} else {
-											direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
-										}
-										if (!trip.trip_headsign == "") {
-											headsign1 = trip.trip_headsign;
-										}
+						var direction0String = "";
+						var headsign0 = "";
+						var direction1String = "";
+						var headsign1 = "";
+						// If we have stop headsigns instead of trip headsigns, sort by those
+						if (timesByRoute[route.route_id][0].stop_headsign && timesByRoute[route.route_id][0].stop_headsign != "") {
+							timesByRoute[route.route_id].forEach(function(time) {
+								console.log("foo", time.stop_headsign);
+								if (headsign0 == "")
+									headsign0 = time.stop_headsign;
+								if (headsign1 == "" && headsign0 != time.stop_headsign)
+									headsign1 = time.stop_headsign;
+								if (headsign1 == time.stop_headsign) {
+									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+										freqByTrip[time.trip_id].forEach(function(freq) {
+											direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+										});
+										freqTripsShown[time.trip_id] = "";
 									} else {
-										if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
-											freqByTrip[time.trip_id].forEach(function(freq) {
-												direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
-											});
-											freqTripsShown[time.trip_id] = "";
-										} else {
-											direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
-										}
+										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+									}
+								}
+								else if (headsign0 == time.stop_headsign) {
+									
+									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+										freqByTrip[time.trip_id].forEach(function(freq) {
+											direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+										});
+										freqTripsShown[time.trip_id] = "";
+									} else {
+										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+									}
+								}
+								else
+									console.log("ERROR: Entry has no stop headsign", time);
+							});
+							
+						} else {
+							timesByRoute[route.route_id].forEach(function(time) {
+								var trip = tripById[time.trip_id][0];
+								if (trip.direction_id === '1') {
+									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+										freqByTrip[time.trip_id].forEach(function(freq) {
+											direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+										});
+										freqTripsShown[time.trip_id] = "";
+									} else {
+										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
 									}
 									if (!trip.trip_headsign == "") {
-										headsign0 = trip.trip_headsign;
+										headsign1 = trip.trip_headsign;
 									}
-								});
-							}
+								} else {
+									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
+										freqByTrip[time.trip_id].forEach(function(freq) {
+											direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+										});
+										freqTripsShown[time.trip_id] = "";
+									} else {
+										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+									}
+								}
+								if (!trip.trip_headsign == "") {
+									headsign0 = trip.trip_headsign;
+								}
+							});
+						}
 						
 						var table = "<table><tr width : 250px>";
 						var tableR1 = "<tr width : 250px>";
