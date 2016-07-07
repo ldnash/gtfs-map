@@ -1,12 +1,12 @@
-//Mobile
-//If only one, show no dropdown
-
 var ShowRouteByDefault = true;
 
 // Global object to hold references to each polyline
 var PolylinesById = new Object();
 
 var clusterRadius = 80;
+
+// Dictionary to hold route colors
+var colorByRoute  = new Object();
 
 function LoadCSV(url) {
 		var deferred = $.ajax({
@@ -118,21 +118,22 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		// Sort stops by parent_id, so we can cluster them into one marker
 		var stopsByParent = groupBy(stopData, 'parent_station');
 		
-		var lineColor = "#d39800";
-		
 		// Draw shapes (polylines) for each route
 		for(var routeId in sortedTrips) {
 			var trips = sortedTrips[routeId];
 			var routeInfo;
+			// Set line color to the default
+			var lineColor = "#d39800";
 			for(var i = 0; i < routeData.length; i++) {
 				if (routeData[i].route_id === routeId) { routeInfo = routeData[i]; break; }
 			}
-			// Set line color to the default
 			
 			// Use styling data from route instead, if it exists
 			if (routeInfo.route_color) {
 				lineColor = "#" + routeInfo.route_color;
 			}
+			
+			colorByRoute[routeId] = lineColor;
 			//Get all shapes to draw for this route
 			var flags = [], shapes = [], l = trips.length, i;
 			for( i=0; i<l; i++) {
@@ -157,6 +158,8 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				map.addLayer(routeLine);
 			}
 		}
+		
+		console.log(colorByRoute);
 		
 		// Find the services we should display arrival times for
 		var dateArgument = getParameterByName('date');
@@ -246,13 +249,14 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 						optionsString = optionsString + "<option value = \"" + routeId + "\">" + routeById[routeId][0].route_long_name + "</option>";
 					}
 				} else {
-					popupStr += "<p>" + routeById[Object.keys(timesByRoute)[0]][0].route_long_name + "</p><br>";
+					// If there is only one route, don't bother with a dropdown.  We also add a hidden field with routeId so we can hide other routes when this popup opens
+					popupStr += "<div id='routeColorIndicator' class='colorbox' style='background: " + colorByRoute[Object.keys(timesByRoute)[0]] + ";'></div><p>Route: " + routeById[Object.keys(timesByRoute)[0]][0].route_long_name + "</p><input type='hidden' id='hiddenId' value='" + routeId + "'/><br>";
 				}
 
 				if (!notEmpty && !singleRoute) {
 					popupStr += "No departures scheduled for this stop";
 				} else if (!singleRoute) {
-					popupStr += "<select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
+					popupStr += "<div id='routeColorIndicator' class='colorbox' style='display:none'></div><select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
 					popupStr += "</select><br><br>";
 				}
 				routeData.forEach(function(route) {
@@ -272,7 +276,6 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 						// If we have stop headsigns instead of trip headsigns, sort by those
 						if (timesByRoute[route.route_id][0].stop_headsign && timesByRoute[route.route_id][0].stop_headsign != "") {
 							timesByRoute[route.route_id].forEach(function(time) {
-								console.log("foo", time.stop_headsign);
 								if (headsign0 == "")
 									headsign0 = time.stop_headsign;
 								if (headsign1 == "" && headsign0 != time.stop_headsign)
@@ -280,22 +283,22 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 								if (headsign1 == time.stop_headsign) {
 									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
 										freqByTrip[time.trip_id].forEach(function(freq) {
-											direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											direction1String += generateFreqItem(freq);
 										});
 										freqTripsShown[time.trip_id] = "";
 									} else {
-										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+										direction1String += generateTimeItem(time);
 									}
 								}
 								else if (headsign0 == time.stop_headsign) {
 									
 									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
 										freqByTrip[time.trip_id].forEach(function(freq) {
-											direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											direction0String += generateFreqItem(freq);
 										});
 										freqTripsShown[time.trip_id] = "";
 									} else {
-										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+										direction0String += generateTimeItem(time);
 									}
 								}
 								else
@@ -308,28 +311,29 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 								if (trip.direction_id === '1') {
 									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
 										freqByTrip[time.trip_id].forEach(function(freq) {
-											direction1String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											direction1String += generateFreqItem(freq);
 										});
 										freqTripsShown[time.trip_id] = "";
 									} else {
-										direction1String += "<li>" + parseTime(time.departure_time) + "</li>";
+										direction1String += generateTimeItem(time);
 									}
-									if (!trip.trip_headsign == "") {
+									if (!trip.trip_headsign == "") {									
 										headsign1 = trip.trip_headsign;
 									}
 								} else {
 									if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
 										freqByTrip[time.trip_id].forEach(function(freq) {
-											direction0String += "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+											direction0String += generateFreqItem(freq);
 										});
 										freqTripsShown[time.trip_id] = "";
 									} else {
-										direction0String += "<li>" + parseTime(time.departure_time) + "</li>";
+										direction0String += generateTimeItem(time);
+									}
+									if (!trip.trip_headsign == "") {
+										headsign0 = trip.trip_headsign;
 									}
 								}
-								if (!trip.trip_headsign == "") {
-									headsign0 = trip.trip_headsign;
-								}
+								
 							});
 						}
 						
@@ -396,10 +400,12 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 	// Pan to popups when they open, and bind js to the dropdown
 	map.on('popupopen', function(e) {
 			var dropdown = $('select.select-popup');
+			if (dropdown[0]) {
 			dropdown.change(function() {
 				var select = dropdown[0];
 				var selected = select.options[select.selectedIndex].value;
 				var toShow = $('#' + selected + 'div');
+				var colorIndicator = $('#routeColorIndicator');
 				// Hide all other divs
 				for (var i=0;i<select.options.length;i++) {
 					
@@ -411,7 +417,11 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				// Show the div we are supposed to
 				if (toShow) {
 					toShow.attr('style', '');
+					colorIndicator.attr('style', 'background: ' + colorByRoute[selected]);
 				}
+				
+				if (selected == "")
+					colorIndicator.attr('style', 'display : none');
 				
 				// Hide/show routes if necessary
 				//if (!ShowRouteByDefault || stringToBoolean(highlight)) {
@@ -421,6 +431,13 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 					map.addLayer(PolylinesById[selected]);
 				//}
 			});
+			} else {
+				var hiddenValue = $('#hiddenId').val();
+				for (var routeId in PolylinesById) {
+						map.removeLayer(PolylinesById[routeId]);
+					}
+					map.addLayer(PolylinesById[hiddenValue]);
+			}
 			// Pan to popup; this doesn't work if we load multiple feeds
 			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
 			px.y -= e.popup._container.clientHeight/2; // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
@@ -487,8 +504,17 @@ function selectIcon(routeType) {
 	return defaultIcon;
 }
 
+//Generate HTML for list items in popup
+function generateFreqItem(freq) {
+	return "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +"</li>";
+}
+
+function generateTimeItem(time) {
+	return "<li>" + parseTime(time.departure_time) + "</li>";
+}
+
 // Helper functions
- function parseDate(str) {
+function parseDate(str) {
     if(!/^(\d){8}$/.test(str)) return "invalid date";
     var y = str.substr(0,4),
         m = str.substr(4,2) - 1,
@@ -520,7 +546,6 @@ Date.prototype.yyyymmdd = function() {
 	if (secs >= 3600) {
 		var numHours = secs / 3600;
 		secs = secs % 3600;
-		console.log(secs);
 		string += numHours;
 		if (numHours == 1)
 			string += " hour"
