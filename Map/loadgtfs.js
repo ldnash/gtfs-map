@@ -1,7 +1,9 @@
 var ShowRouteByDefault = true;
 
 // Global object to hold references to each polyline
-var PolylinesById = new Object();
+var PolylinesByShapeId = new Object();
+// Dictionary to hold trips by stop Id, used for hiding polylines
+var TripsByStop = new Object();
 
 var clusterRadius = 80;
 
@@ -24,6 +26,9 @@ function LoadCSV(url) {
 // This allows us to load multiple GTFS feeds without multiple legends/date selectors
 var legendCreated = false;
 
+// Array of stop IDs to be highlighted as 'hubs'
+var hubs = [];
+
 // Load the Rocky Mountain GTFS
 function LoadRomo(map) {
 	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stops.txt");
@@ -34,6 +39,9 @@ function LoadRomo(map) {
 	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar.txt");
 	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar_dates.txt");
 	var deferredFreq     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/frequencies.txt");
+	
+	hubs.push("NPS_ROMO_070");
+	hubs.push("40");
 	
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
 }
@@ -66,14 +74,14 @@ function LoadBoha(map) {
 }
 
 function LoadEstes(map) {
-	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/stops.txt");
-	var deferredTime     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/stop_times.txt");
-	var deferredTrips    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/trips.txt");
-	var deferredShapes   = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/shapes.txt");
-	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/routes.txt");
-	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar.txt");
-	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/calendar_dates.txt");
-	var deferredFreq     = LoadCSV("https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/EstesFeed/frequencies.txt");
+	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stops.txt");
+	var deferredTime     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stop_times.txt");
+	var deferredTrips    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/trips.txt");
+	var deferredShapes   = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/shapes.txt");
+	var deferredRoute    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/routes.txt");
+	var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar.txt");
+	var deferredDates    = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar_dates.txt");
+	var deferredFreq     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/frequencies.txt");
 	
 	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
 }
@@ -81,13 +89,6 @@ function LoadEstes(map) {
 	
 // Given deferred objects to return the indicated CSV files, populates the map
 function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq) {
-	
-	// Determine if we should show all routes on load, or only when one is selected
-	var showRouteInput = getParameterByName('showRoutesByDefault');
-	if (showRouteInput) {
-		console.log("input", showRouteInput);
-		ShowRouteByDefault = stringToBoolean(showRouteInput);
-	}
 	
 	$.when(deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq).then(function(stopCsv, timesCsv, tripCsv, shapeCsv, routeCsv, calenderCsv, datesCsv, freqCsv) {
 		// Convert the csv data into arrays of objects using jquery-csv
@@ -104,7 +105,6 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		if (freqCsv != null) {
 			freqData = $.csv.toObjects(freqCsv[0]);
 			freqByTrip = groupBy(freqData, 'trip_id');
-			console.log("foo", freqByTrip);
 		}
 		
 		var myIcon = selectIcon(routeData[0].route_type);
@@ -118,7 +118,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		// Sort stops by parent_id, so we can cluster them into one marker
 		var stopsByParent = groupBy(stopData, 'parent_station');
 		
-		// Draw shapes (polylines) for each route
+		// Draw all shapes (polylines) for each route
 		for(var routeId in sortedTrips) {
 			var trips = sortedTrips[routeId];
 			var routeInfo;
@@ -150,16 +150,11 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				shape.forEach(function (point) {
 					latLngs.push(L.latLng(point.shape_pt_lat, point.shape_pt_lon));
 				});
-				toDraw.push(latLngs);
-			});
-			var routeLine = L.multiPolyline(toDraw, {color: lineColor});
-			PolylinesById[routeId] = routeLine;
-			if (ShowRouteByDefault) {
+				var routeLine = L.polyline(latLngs, {color: lineColor});
+				PolylinesByShapeId[shapeId] = routeLine;
 				map.addLayer(routeLine);
-			}
+			});
 		}
-		
-		console.log(colorByRoute);
 		
 		// Find the services we should display arrival times for
 		var dateArgument = getParameterByName('date');
@@ -202,9 +197,15 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		});
 		
 		stopData.forEach(function (stop) {
+			
+			TripsByStop[stop.stop_id] = [];
 			// If a stop has a parent, we will show its times under the station
 			if (stop.parent_station == "" || !stop.parent_station) {
-				var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
+				var marker; 
+				if (contains(hubs, stop.stop_id))
+					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: busHubIcon});
+				else 
+					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
 				// Get only the times for this stop
 				var releventTimes = [];
 				// If this stop is a station, get the times for its children as well
@@ -224,6 +225,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				releventTimes.forEach(function(time) {
 					// Get the trip; trip_id is unique in the dataset, so we can just get the one at index 0
 					var trip = tripById[time.trip_id][0];
+					TripsByStop[stop.stop_id].push(trip);
 					if (contains(runningServices, trip.service_id)) {
 						if (!timesByRoute[trip.route_id]) {timesByRoute[trip.route_id] = [];}
 						timesByRoute[trip.route_id].push(time);
@@ -240,7 +242,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				// If a stop has only one route, we don't want to show a dropdown
 				var singleRoute = (1 == Object.keys(timesByRoute).length);
 				var optionsString = "";
-				var popupStr = "<h1>" + stop.stop_name + "</h1><br>";
+				var popupStr = "<h1>" + stop.stop_name + "</h1> <input type='hidden' id='stopId' value=" + stop.stop_id + "><br>";
 				var notEmpty = false;
 				
 				if (!singleRoute) {
@@ -400,12 +402,20 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 	// Pan to popups when they open, and bind js to the dropdown
 	map.on('popupopen', function(e) {
 			var dropdown = $('select.select-popup');
+			var stopId = $('#stopId');
+			var stopTrips = TripsByStop[stopId[0].value];
 			if (dropdown[0]) {
 			dropdown.change(function() {
 				var select = dropdown[0];
 				var selected = select.options[select.selectedIndex].value;
 				var toShow = $('#' + selected + 'div');
 				var colorIndicator = $('#routeColorIndicator');
+				var tripsForRoute = [];
+				// Filter to get only trips for selected route
+				stopTrips.forEach(function (trip) {
+					if (trip.route_id == selected)
+						tripsForRoute.push(trip);
+				});
 				// Hide all other divs
 				for (var i=0;i<select.options.length;i++) {
 					
@@ -423,20 +433,28 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				if (selected == "")
 					colorIndicator.attr('style', 'display : none');
 				
-				// Hide/show routes if necessary
-				//if (!ShowRouteByDefault || stringToBoolean(highlight)) {
-					for (var routeId in PolylinesById) {
-						map.removeLayer(PolylinesById[routeId]);
-					}
-					map.addLayer(PolylinesById[selected]);
-				//}
+				// Hide/show
+				for (var shapeId in PolylinesByShapeId) {
+					map.removeLayer(PolylinesByShapeId[shapeId]);
+				}
+				tripsForRoute.forEach(function (trip) {
+					map.addLayer(PolylinesByShapeId[trip.shape_id]);
+				});
 			});
 			} else {
 				var hiddenValue = $('#hiddenId').val();
-				for (var routeId in PolylinesById) {
-						map.removeLayer(PolylinesById[routeId]);
+				var tripsForRoute = [];
+				// Filter to get only trips for selected route
+				stopTrips.forEach(function (trip) {
+					if (trip.route_id == hiddenValue)
+						tripsForRoute.push(trip);
+				});
+				for (var shapeId in PolylinesByShapeId) {
+						map.removeLayer(PolylinesByShapeId[shapeId]);
 					}
-					map.addLayer(PolylinesById[hiddenValue]);
+					tripsForRoute.forEach(function (trip) {
+						map.addLayer(PolylinesByShapeId[trip.shape_id]);
+					});
 			}
 			// Pan to popup; this doesn't work if we load multiple feeds
 			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
@@ -445,15 +463,9 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		});
 		
 	map.on('popupclose', function (e) {
-		if (!ShowRouteByDefault) {
-			for (var routeId in PolylinesById) {
-				map.removeLayer(PolylinesById[routeId]);
-			}
-		} else {
-			for (var routeId in PolylinesById) {
-				map.addLayer(PolylinesById[routeId]);
-			}
-		}
+		for (var shapeId in PolylinesByShapeId) {
+			map.addLayer(PolylinesByShapeId[shapeId]);
+		 }
 	});
 }
 
@@ -484,6 +496,13 @@ var ferryIcon = L.icon({
 	
 var defaultIcon = L.icon({
 		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
+		iconSize: [32, 32],
+		iconAnchor: [16, 0],
+		popupAnchor: [0, 0]
+	});
+	
+var busHubIcon = L.icon({
+		iconUrl: '../Images/bushub.png',
 		iconSize: [32, 32],
 		iconAnchor: [16, 0],
 		popupAnchor: [0, 0]
