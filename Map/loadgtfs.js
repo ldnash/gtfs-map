@@ -27,6 +27,7 @@ function LoadCSV(url) {
 var legendCreated = false;
 
 // Array of stop IDs to be highlighted as 'hubs'
+// Add stop IDs to this array to replace the regular marker with a red version
 var hubs = [];
 
 // Load the Rocky Mountain GTFS
@@ -107,8 +108,6 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			freqByTrip = groupBy(freqData, 'trip_id');
 		}
 		
-		var myIcon = selectIcon(routeData[0].route_type);
-		
 		// Create dictionaries to allow quick lookup by ID
 		var sortedShapes = groupBy(shapeData, 'shape_id');
 		var sortedTrips  = groupBy(tripData, 'route_id');
@@ -117,44 +116,6 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		
 		// Sort stops by parent_id, so we can cluster them into one marker
 		var stopsByParent = groupBy(stopData, 'parent_station');
-		
-		// Draw all shapes (polylines) for each route
-		for(var routeId in sortedTrips) {
-			var trips = sortedTrips[routeId];
-			var routeInfo;
-			// Set line color to the default
-			var lineColor = "#d39800";
-			for(var i = 0; i < routeData.length; i++) {
-				if (routeData[i].route_id === routeId) { routeInfo = routeData[i]; break; }
-			}
-			
-			// Use styling data from route instead, if it exists
-			if (routeInfo.route_color) {
-				lineColor = "#" + routeInfo.route_color;
-			}
-			
-			colorByRoute[routeId] = lineColor;
-			//Get all shapes to draw for this route
-			var flags = [], shapes = [], l = trips.length, i;
-			for( i=0; i<l; i++) {
-				if(flags[trips[i].shape_id]) continue;
-				flags[trips[i].shape_id] = true;
-				shapes.push(trips[i].shape_id);
-			}
-			
-			var toDraw = [];
-			// Draw each shape for this route
-			shapes.forEach(function(shapeId) {
-				var latLngs = [];
-				var shape = sortedShapes[shapeId];
-				shape.forEach(function (point) {
-					latLngs.push(L.latLng(point.shape_pt_lat, point.shape_pt_lon));
-				});
-				var routeLine = L.polyline(latLngs, {color: lineColor});
-				PolylinesByShapeId[shapeId] = routeLine;
-				map.addLayer(routeLine);
-			});
-		}
 		
 		// Find the services we should display arrival times for
 		var dateArgument = getParameterByName('date');
@@ -191,7 +152,175 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			}
 		});
 		
-		// Create our markers with popups
+		// Draw all shapes (polylines) for each route
+		for(var routeId in sortedTrips) {
+			var trips = sortedTrips[routeId];
+			var routeInfo;
+			// Set line color to the default
+			var lineColor = "#d39800";
+			for(var i = 0; i < routeData.length; i++) {
+				if (routeData[i].route_id === routeId) { routeInfo = routeData[i]; break; }
+			}
+			
+			// Use styling data from route instead, if it exists
+			if (routeInfo.route_color) {
+				lineColor = "#" + routeInfo.route_color;
+			}
+			
+			colorByRoute[routeId] = lineColor;
+			//Get all shapes to draw for this route
+			var flags = [], shapes = [], l = trips.length, i;
+			for( i=0; i<l; i++) {
+				if(flags[trips[i].shape_id] || !contains(runningServices, trips[i].service_id)) continue;
+				flags[trips[i].shape_id] = true;
+				shapes.push(trips[i].shape_id);
+			}
+			
+			var toDraw = [];
+			// Draw each shape for this route
+			shapes.forEach(function(shapeId) {
+				var latLngs = [];
+				var shape = sortedShapes[shapeId];
+				shape.forEach(function (point) {
+					latLngs.push(L.latLng(point.shape_pt_lat, point.shape_pt_lon));
+				});
+				var routeLine = L.polyline(latLngs, {color: lineColor});
+				PolylinesByShapeId[shapeId] = routeLine;
+				map.addLayer(routeLine);
+			});
+		}
+		
+		
+		
+		var hubStops = stopData.filter(function(stop) {
+			return contains(hubs, stop.stop_id);
+		});
+		
+		var normalStops = stopData.filter(function(stop) {
+			return !contains(hubs, stop.stop_id);
+		});
+		
+		var baseIcon = selectIcon(routeData[0].route_type);
+		
+		addStopMarkers(map, normalStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, baseIcon);
+		
+		var hubIcon = busHubIcon;
+		
+		addStopMarkers(map, hubStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, hubIcon);
+		
+		// See if we have already created a legend/datepicker.  If not, do it.
+		if (!legendCreated) {
+			legendCreated = true;
+			var legend = L.control({position: 'topright' });
+			legend.onAdd = function (map) {
+				var div = L.DomUtil.create('div', 'info legend');
+				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
+				$(div).attr('id', 'legendContainer');
+				div.innerHTML += '<table><tr>' + '<td><img src="' + baseIcon.options.iconUrl + 
+					'" height="32px" width="32px" alt="Transit Stop Icon"/></td>' + '<td><p style="{float: right}">Transit Stop</p></td></tr>' 
+					+ '<tr><td><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr></table>';
+				return div;
+			}
+			legend.addTo(map);
+			
+			var dateSelect = L.control({position: 'bottomright'});
+			dateSelect.onAdd = function (map) {
+				var div = L.DomUtil.create('div', 'dpick');
+				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
+				div.innerHTML += '<p>Select a Date</p><input type="text" id="datepicker">';
+				return div;
+			}
+		
+			dateSelect.addTo(map);
+			$('#datepicker').datepicker({
+				onSelect: function (date) {
+					var dateToShow = $('#datepicker').datepicker("getDate");
+				var parkId = getParameterByName('parkId');
+				var url = getPathFromUrl(window.location.href);
+				url += '?';
+				if (parkId && parkId != "")
+					url += 'parkId=' + parkId + '&'
+				url += 'date=' + dateToShow.yyyymmdd();
+				window.location.href = url;
+				},
+			}).datepicker('setDate', date);
+		}
+	});
+	
+	// Pan to popups when they open, and bind js to the dropdown
+	map.on('popupopen', function(e) {
+			var dropdown = $('select.select-popup');
+			var stopId = $('#stopId');
+			var stopTrips = TripsByStop[stopId[0].value];
+			if (dropdown[0]) {
+			dropdown.change(function() {
+				var select = dropdown[0];
+				var selected = select.options[select.selectedIndex].value;
+				var toShow = $('#' + selected + 'div');
+				var colorIndicator = $('#routeColorIndicator');
+				var tripsForRoute = [];
+				// Filter to get only trips for selected route
+				stopTrips.forEach(function (trip) {
+					if (trip.route_id == selected)
+						tripsForRoute.push(trip);
+				});
+				// Hide all other divs
+				for (var i=0;i<select.options.length;i++) {
+					
+					var toHide = $('#' + select.options[i].value + 'div');
+					if (toHide) {
+						toHide.attr('style', 'display : none');
+					}
+				}
+				// Show the div we are supposed to
+				if (toShow) {
+					toShow.attr('style', '');
+					colorIndicator.attr('style', 'background: ' + colorByRoute[selected]);
+				}
+				
+				if (selected == "")
+					colorIndicator.attr('style', 'display : none');
+				
+				// Hide/show
+				for (var shapeId in PolylinesByShapeId) {
+					map.removeLayer(PolylinesByShapeId[shapeId]);
+				}
+				tripsForRoute.forEach(function (trip) {
+					map.addLayer(PolylinesByShapeId[trip.shape_id]);
+				});
+			});
+			} else {
+				var hiddenValue = $('#hiddenId').val();
+				var tripsForRoute = [];
+				// Filter to get only trips for selected route
+				stopTrips.forEach(function (trip) {
+					if (trip.route_id == hiddenValue)
+						tripsForRoute.push(trip);
+				});
+				for (var shapeId in PolylinesByShapeId) {
+						map.removeLayer(PolylinesByShapeId[shapeId]);
+					}
+					tripsForRoute.forEach(function (trip) {
+						map.addLayer(PolylinesByShapeId[trip.shape_id]);
+					});
+			}
+			// Pan to popup; this doesn't work if we load multiple feeds
+			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
+			px.y -= e.popup._container.clientHeight/2; // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
+			map.panTo(map.unproject(px),{animate: true}); // pan to new center
+		});
+	
+	// When popup closes, add all shapes back to the map
+	map.on('popupclose', function (e) {
+		for (var shapeId in PolylinesByShapeId) {
+			map.addLayer(PolylinesByShapeId[shapeId]);
+		 }
+	});
+}
+
+// Adds all stops in stopData to the map, and builds a popup for each stop.
+function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, myIcon) {
+	// Create our markers with popups
 		var markerLayer = L.markerClusterGroup({
 			maxClusterRadius : clusterRadius,
 		});
@@ -201,11 +330,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			TripsByStop[stop.stop_id] = [];
 			// If a stop has a parent, we will show its times under the station
 			if (stop.parent_station == "" || !stop.parent_station) {
-				var marker; 
-				if (contains(hubs, stop.stop_id))
-					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: busHubIcon});
-				else 
-					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
+				var marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
 				// Get only the times for this stop
 				var releventTimes = [];
 				// If this stop is a station, get the times for its children as well
@@ -256,7 +381,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 				}
 
 				if (!notEmpty && !singleRoute) {
-					popupStr += "No departures scheduled for this stop";
+					return;
 				} else if (!singleRoute) {
 					popupStr += "<div id='routeColorIndicator' class='colorbox' style='display:none'></div><select class='select-popup' id='selector' > <option value=\"\">Select a Route</option>" + optionsString;
 					popupStr += "</select><br><br>";
@@ -360,113 +485,6 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			}
 		});
 		map.addLayer(markerLayer);
-		
-		if (!legendCreated) {
-			legendCreated = true;
-			var legend = L.control({position: 'topright' });
-			legend.onAdd = function (map) {
-				var div = L.DomUtil.create('div', 'info legend');
-				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
-				$(div).attr('id', 'legendContainer');
-				div.innerHTML += '<table><tr>' + '<td><img src="' + myIcon.options.iconUrl + 
-					'" height="32px" width="32px" alt="Transit Stop Icon"/></td>' + '<td><p style="{float: right}">Transit Stop</p></td></tr>' 
-					+ '<tr><td><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr></table>';
-				return div;
-			}
-			legend.addTo(map);
-			
-			var dateSelect = L.control({position: 'bottomright'});
-			dateSelect.onAdd = function (map) {
-				var div = L.DomUtil.create('div', 'dpick');
-				$(div).attr('style', 'background : #f9f7f1; padding: 5px;');
-				div.innerHTML += '<p>Select a Date</p><input type="text" id="datepicker">';
-				return div;
-			}
-		
-			dateSelect.addTo(map);
-			$('#datepicker').datepicker({
-				onSelect: function (date) {
-					var dateToShow = $('#datepicker').datepicker("getDate");
-				var parkId = getParameterByName('parkId');
-				var url = getPathFromUrl(window.location.href);
-				url += '?';
-				if (parkId && parkId != "")
-					url += 'parkId=' + parkId + '&'
-				url += 'date=' + dateToShow.yyyymmdd();
-				window.location.href = url;
-				},
-			}).datepicker('setDate', date);
-		}
-	});
-	
-	// Pan to popups when they open, and bind js to the dropdown
-	map.on('popupopen', function(e) {
-			var dropdown = $('select.select-popup');
-			var stopId = $('#stopId');
-			var stopTrips = TripsByStop[stopId[0].value];
-			if (dropdown[0]) {
-			dropdown.change(function() {
-				var select = dropdown[0];
-				var selected = select.options[select.selectedIndex].value;
-				var toShow = $('#' + selected + 'div');
-				var colorIndicator = $('#routeColorIndicator');
-				var tripsForRoute = [];
-				// Filter to get only trips for selected route
-				stopTrips.forEach(function (trip) {
-					if (trip.route_id == selected)
-						tripsForRoute.push(trip);
-				});
-				// Hide all other divs
-				for (var i=0;i<select.options.length;i++) {
-					
-					var toHide = $('#' + select.options[i].value + 'div');
-					if (toHide) {
-						toHide.attr('style', 'display : none');
-					}
-				}
-				// Show the div we are supposed to
-				if (toShow) {
-					toShow.attr('style', '');
-					colorIndicator.attr('style', 'background: ' + colorByRoute[selected]);
-				}
-				
-				if (selected == "")
-					colorIndicator.attr('style', 'display : none');
-				
-				// Hide/show
-				for (var shapeId in PolylinesByShapeId) {
-					map.removeLayer(PolylinesByShapeId[shapeId]);
-				}
-				tripsForRoute.forEach(function (trip) {
-					map.addLayer(PolylinesByShapeId[trip.shape_id]);
-				});
-			});
-			} else {
-				var hiddenValue = $('#hiddenId').val();
-				var tripsForRoute = [];
-				// Filter to get only trips for selected route
-				stopTrips.forEach(function (trip) {
-					if (trip.route_id == hiddenValue)
-						tripsForRoute.push(trip);
-				});
-				for (var shapeId in PolylinesByShapeId) {
-						map.removeLayer(PolylinesByShapeId[shapeId]);
-					}
-					tripsForRoute.forEach(function (trip) {
-						map.addLayer(PolylinesByShapeId[trip.shape_id]);
-					});
-			}
-			// Pan to popup; this doesn't work if we load multiple feeds
-			var px = map.project(e.popup._latlng); // find the pixel location on the map where the popup anchor is
-			px.y -= e.popup._container.clientHeight/2; // find the height of the popup container, divide by 2, subtract from the Y axis of marker location
-			map.panTo(map.unproject(px),{animate: true}); // pan to new center
-		});
-		
-	map.on('popupclose', function (e) {
-		for (var shapeId in PolylinesByShapeId) {
-			map.addLayer(PolylinesByShapeId[shapeId]);
-		 }
-	});
 }
 
 // Icons for each type of transportation
