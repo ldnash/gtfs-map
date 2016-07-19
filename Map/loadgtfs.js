@@ -202,10 +202,19 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 			// If a stop has a parent, we will show its times under the station
 			if (stop.parent_station == "" || !stop.parent_station) {
 				var marker; 
+				var geojson = {"type": "FeatureCollection","features":[{"type": "Feature","geometry":{"type": "Point","coordinates":[stop.stop_lon,stop.stop_lat]},"properties":{}}]};
 				if (contains(hubs, stop.stop_id))
-					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: busHubIcon});
+					var style = {point: {
+						'marker-color': '#ff0000',
+						'marker-size': 'large',
+						'marker-symbol': 'rail'
+					}};
 				else 
-					marker = L.marker([stop.stop_lat, stop.stop_lon], {icon: myIcon});
+					var style = {point: {
+						'marker-color': '#000000',
+						'marker-size': 'medium',
+						'marker-symbol': 'rail'
+					}};
 				// Get only the times for this stop
 				var releventTimes = [];
 				// If this stop is a station, get the times for its children as well
@@ -355,7 +364,8 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 						}
 					
 				});
-				marker.bindPopup(popupStr);
+				
+				marker = L.npmap.layer.geojson({data:geojson, styles:style, popup:{description:popupStr}});
 				markerLayer.addLayer(marker);
 			}
 		});
