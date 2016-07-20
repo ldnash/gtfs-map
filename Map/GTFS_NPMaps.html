@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>NPS GTFS Test Map</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+	<!-- This line ensures it will work in IE" -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge;" />
+
+    <link rel="shortcut icon" href="http://cartodb.com/assets/favicon.ico" />
+    
+    <!-- Map takes up full browser window -->
+    <style>
+      html, body, #map {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+      }
+    </style>
+	
+    <link rel="stylesheet" href="https://www.nps.gov/lib/npmap.js/3.0.15/npmap.css" />
+	<link rel="stylesheet" href="jqueryui/jquery-ui.min.css">
+	<link rel="stylesheet" href="leafletmarkercluster/MarkerCluster.css" />
+	<link rel="stylesheet" href="leafletmarkercluster/markercluster.Default.css" />
+	<link rel="stylesheet" href="popup.css" />
+	
+	<style>
+        .npmap .leaflet-popup-content {
+            font-size: 14px;
+            margin: 15px;
+            min-width: 250px !important;
+			max-height: 300px !important;
+    }
+    </style>
+	
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.js"></script>    
+    <script src="npmap.js"></script>    
+    <script src="jquery-csv.js"></script>
+    <script src="loadgtfs.js"></script>
+	<script src="jqueryui/jquery-ui.min.js"></script>
+	<script src="leafletmarkercluster/leaflet.markercluster-src.js"></script>
+    
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <script type="text/javascript"> 
+        var map = L.npmap.map({div:'map', fullscreenControl: true}).setView([41.242247, -81.549109], 13);
+		
+		var toLoad = getParameterByName('parkId');
+		if (toLoad === 'boha') {
+			map.setView([42.30575300304638, -71.0185432434082], 12);
+			LoadBoha(map);
+		}
+		else if (toLoad === 'romo') {
+			map.setView([40.349553154600784, -105.55835723876952], 13);
+			LoadRomo(map);
+			LoadEstes(map);
+		}
+		else
+			LoadCuva(map);
+		
+	function getParameterByName(name, url) {
+		if (!url) url = window.location.href;
+		name = name.replace(/[\[\]]/g, "\\$&");
+		var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+			results = regex.exec(url);
+		if (!results) return null;
+		if (!results[2]) return '';
+		return decodeURIComponent(results[2].replace(/\+/g, " "));
+	}
+    </script>
+  </body>
+</html>
