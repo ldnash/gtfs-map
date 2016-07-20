@@ -336,13 +336,13 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
 					var style = {point: {
 						'marker-color': '#ff0000',
 						'marker-size': 'large',
-						'marker-symbol': 'rail'
+						'marker-symbol': pickMarkerIcon(routeData[0].route_type)
 					}};
 				else 
 					var style = {point: {
 						'marker-color': '#000000',
 						'marker-size': 'medium',
-						'marker-symbol': 'rail'
+						'marker-symbol': pickMarkerIcon(routeData[0].route_type)
 					}};
 				// Get only the times for this stop
 				var releventTimes = [];
@@ -391,8 +391,10 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
 				} else {
 					// If there is only one route, don't bother with a dropdown.  We also add a hidden field with routeId so we can hide other routes when this popup opens
 					popupStr += "<div id='routeColorIndicator' class='colorbox' style='background: " + colorByRoute[Object.keys(timesByRoute)[0]] + ";'></div><p>Route: " + routeById[Object.keys(timesByRoute)[0]][0].route_long_name + "</p><input type='hidden' id='hiddenId' value='" + routeId + "'/><br>";
+					if (!contains(hubs, stop.stop_id)) {
+						style.point['marker-color'] = colorByRoute[Object.keys(timesByRoute)[0]];
+					}
 				}
-
 				if (!notEmpty && !singleRoute) {
 					return;
 				} else if (!singleRoute) {
@@ -542,6 +544,18 @@ var busHubIcon = L.icon({
 //var cablecarIcon;
 //var gondolaIcon;
 //var finicularIcon;
+
+function pickMarkerIcon(routeType) {
+	if (routeType) {
+		if (routeType === '2')
+			return 'rail';
+		if (routeType === '3')
+			return 'bus';
+		if (routeType === '4')
+			return 'ferry';
+	}
+	return 'rail';
+}
 
 function selectIcon(routeType) {
 	if (routeType) {
