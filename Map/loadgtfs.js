@@ -30,6 +30,20 @@ var legendCreated = false;
 // Add stop IDs to this array to replace the regular marker with a red version
 var hubs = [];
 
+// Load the given GTFS feed
+function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFile, calendarFile, calDatesFile, freqFile) {
+	var deferredStop     = LoadCSV(stopsFile);
+	var deferredTime     = LoadCSV(timesFile);
+	var deferredTrips    = LoadCSV(tripsFile);
+	var deferredShapes   = LoadCSV(shapesFile);
+	var deferredRoute    = LoadCSV(routesFile);
+	var deferredCalender = LoadCSV(calendarFile);
+	var deferredDates    = LoadCSV(calDatesFile);
+	var deferredFreq     = LoadCSV(freqFile);
+	
+	LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
+}
+
 // Load the Rocky Mountain GTFS
 function LoadRomo(map) {
 	var deferredStop     = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stops.txt");
@@ -199,14 +213,10 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 		var normalStops = stopData.filter(function(stop) {
 			return !contains(hubs, stop.stop_id);
 		});
+			
+		addStopMarkers(map, normalStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip);
 		
-		var baseIcon = selectIcon(routeData[0].route_type);
-		
-		addStopMarkers(map, normalStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, baseIcon);
-		
-		var hubIcon = busHubIcon;
-		
-		addStopMarkers(map, hubStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, hubIcon);
+		addStopMarkers(map, hubStops, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip);
 		
 		// See if we have already created a legend/datepicker.  If not, do it.
 		if (!legendCreated) {
@@ -319,7 +329,7 @@ function LoadGTFS(map,deferredStop, deferredTime, deferredTrips, deferredShapes,
 }
 
 // Adds all stops in stopData to the map, and builds a popup for each stop.
-function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip, myIcon) {
+function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runningServices, routeById, routeData, freqByTrip) {
 	// Create our markers with popups
 		var markerLayer = L.markerClusterGroup({
 			maxClusterRadius : clusterRadius,
@@ -334,7 +344,7 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
 				var geojson = {"type": "FeatureCollection","features":[{"type": "Feature","geometry":{"type": "Point","coordinates":[stop.stop_lon,stop.stop_lat]},"properties":{}}]};
 				if (contains(hubs, stop.stop_id))
 					var style = {point: {
-						'marker-color': '#ff0000',
+						'marker-color': '#000000',
 						'marker-size': 'large',
 						'marker-symbol': pickMarkerIcon(routeData[0].route_type)
 					}};
@@ -503,48 +513,6 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
 		map.addLayer(markerLayer);
 }
 
-// Icons for each type of transportation
-
-//var streetcarIcon;
-//var subwayIcon;
-var railIcon = L.icon({
-		iconUrl: '../Images/rail.svg',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-	
-var busIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-	
-var ferryIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/boat-tour-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-	
-var defaultIcon = L.icon({
-		iconUrl: 'https://raw.githubusercontent.com/nationalparkservice/npmap-symbol-library/gh-pages/renders/standalone/bus-stop-black-32.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-	
-var busHubIcon = L.icon({
-		iconUrl: '../Images/bushub.png',
-		iconSize: [32, 32],
-		iconAnchor: [16, 0],
-		popupAnchor: [0, 0]
-	});
-//var cablecarIcon;
-//var gondolaIcon;
-//var finicularIcon;
-
 function pickMarkerIcon(routeType) {
 	if (routeType) {
 		if (routeType === '2')
@@ -555,18 +523,6 @@ function pickMarkerIcon(routeType) {
 			return 'ferry';
 	}
 	return 'rail';
-}
-
-function selectIcon(routeType) {
-	if (routeType) {
-		if (routeType === '2')
-			return railIcon;
-		if (routeType === '3')
-			return busIcon;
-		if (routeType === '4')
-			return ferryIcon;
-	}
-	return defaultIcon;
 }
 
 //Generate HTML for list items in popup
