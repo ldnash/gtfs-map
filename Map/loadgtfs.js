@@ -251,9 +251,9 @@ function LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes
                 var div = L.DomUtil.create('div', 'info legend');
                 $(div).attr('style', 'background : #f9f7f1; padding: 5px;');
                 $(div).attr('id', 'legendContainer');
-                div.innerHTML += '<table><tr>' + '<td><img src="https://raw.githubusercontent.com/ldnash/gtfs-map/gh-pages/Map/iconbase.PNG"' + 
+                div.innerHTML += '<table><tr>' + '<td style="padding:10px"><img src="legendmarker.png"' + 
                     '" alt="Transit Stop Icon"/></td>' + '<td><p style="{float: right}">Transit Stop</p></td></tr>' +
-                    '<tr><td><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr></table>';
+                    '<tr><td style="padding:10px"><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr></table>';
                 return div;
             }
             legend.addTo(map);
