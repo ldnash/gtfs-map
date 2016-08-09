@@ -52,15 +52,51 @@
 		var toLoad = getParameterByName('parkId');
 		if (toLoad === 'boha') {
 			map.setView([42.30575300304638, -71.0185432434082], 12);
-			LoadBoha(map);
+			LoadGTFSFeed(map, "https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/stops.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/stop_times.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/trips.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/shapes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/routes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar.txt",
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar_dates.txt", 
+				null, 
+				1, false);
 		}
 		else if (toLoad === 'romo') {
 			map.setView([40.349553154600784, -105.55835723876952], 13);
-			LoadRomo(map);
-			LoadEstes(map);
+			// ROMO Feeds
+			hubs.push("NPS_ROMO_070");
+			hubs.push("40");
+			LoadGTFSFeed(map, "https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stops.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stop_times.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/trips.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/shapes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/routes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar.txt",
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar_dates.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/frequencies.txt", 
+				80, true);
+			// Estes Park feeds
+			LoadGTFSFeed(map, "https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stops.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stop_times.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/trips.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/shapes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/routes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar.txt",
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar_dates.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/frequencies.txt", 
+				80, true);
 		}
 		else
-			LoadCuva(map);
+			LoadGTFSFeed(map, "https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/stops.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/stop_times.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/trips.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/shapes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/routes.txt", 
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar.txt",
+				"https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar_dates.txt", 
+				null, 
+				1, false);
 		
 	function getParameterByName(name, url) {
 		if (!url) url = window.location.href;

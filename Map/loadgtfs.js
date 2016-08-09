@@ -36,6 +36,7 @@ var hubs = [];
 
 // Load the given GTFS feed
 function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFile, calendarFile, calDatesFile, freqFile, clusterDistance, shouldColorStops) {
+	console.log("start");
     var deferredStop = LoadCSV(stopsFile);
     var deferredTime = LoadCSV(timesFile);
     var deferredTrips = LoadCSV(tripsFile);
@@ -43,75 +44,19 @@ function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFi
     var deferredRoute = LoadCSV(routesFile);
     var deferredCalender = LoadCSV(calendarFile);
     var deferredDates = LoadCSV(calDatesFile);
-    var deferredFreq = LoadCSV(freqFile);
-
+	if (freqFile)
+		var deferredFreq = LoadCSV(freqFile);
+	else
+		var deferredFreq = null;
+	console.log("got here");
     if (clusterDistance) {
         if (clusterDistance <= 0)
             clusterRadius = 1;
         else
             clusterRadius = clusterDistance;
-
-        colorIcons = shouldColorStops;
-
-        LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
-    }
-}
-
-// Load the Rocky Mountain GTFS
-function LoadRomo(map) {
-    var deferredStop = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stops.txt");
-    var deferredTime = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/stop_times.txt");
-    var deferredTrips = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/trips.txt");
-    var deferredShapes = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/shapes.txt");
-    var deferredRoute = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/routes.txt");
-    var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar.txt");
-    var deferredDates = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/calendar_dates.txt");
-    var deferredFreq = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo/shuttles/frequencies.txt");
-
-    hubs.push("NPS_ROMO_070");
-    hubs.push("40");
-
-    LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
-}
-
-// Load the Cuyahoga Valley GTFS
-function LoadCuva(map) {
-    var deferredStop = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/stops.txt");
-    var deferredTime = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/stop_times.txt");
-    var deferredTrips = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/trips.txt");
-    var deferredShapes = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/shapes.txt");
-    var deferredRoute = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/routes.txt");
-    var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar.txt");
-    var deferredDates = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/cuva/scenic-rail/calendar_dates.txt");
-
-    LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, null);
-}
-
-// Load the Boston Harbor Islands GTFS
-function LoadBoha(map) {
-    var deferredStop = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/stops.txt");
-    var deferredTime = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/stop_times.txt");
-    var deferredTrips = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/trips.txt");
-    var deferredShapes = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/shapes.txt");
-    var deferredRoute = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/routes.txt");
-    var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar.txt");
-    var deferredDates = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/boha/ferries/calendar_dates.txt");
-    clusterRadius = 1;
-
-    LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, null);
-}
-
-function LoadEstes(map) {
-    var deferredStop = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stops.txt");
-    var deferredTime = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/stop_times.txt");
-    var deferredTrips = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/trips.txt");
-    var deferredShapes = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/shapes.txt");
-    var deferredRoute = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/routes.txt");
-    var deferredCalender = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar.txt");
-    var deferredDates = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/calendar_dates.txt");
-    var deferredFreq = LoadCSV("https://raw.githubusercontent.com/nationalparkservice/nps-gtfs/gh-pages/romo-epshuttles/shuttles/frequencies.txt");
-
-    colorIcons = true;
+	}
+	
+    colorIcons = shouldColorStops;
 
     LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq);
 }
@@ -119,6 +64,7 @@ function LoadEstes(map) {
 
 // Given deferred objects to return the indicated CSV files, populates the map
 function LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq) {
+	console.log("here");
 
     $.when(deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq).then(function(stopCsv, timesCsv, tripCsv, shapeCsv, routeCsv, calenderCsv, datesCsv, freqCsv) {
         // Convert the csv data into arrays of objects using jquery-csv
@@ -683,7 +629,7 @@ function getPickupString(type) {
         if (type === '1')
             return "No pickup available";
         if (type === '2')
-            return "Must phone agency to arrange pickup"
+            return "Must notify agency to arrange pickup"
         if (type === '3')
             return "Must coordinate with driver to arrange pickup"
         return "";
