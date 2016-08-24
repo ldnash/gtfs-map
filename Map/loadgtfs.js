@@ -36,7 +36,6 @@ var hubs = [];
 
 // Load the given GTFS feed
 function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFile, calendarFile, calDatesFile, freqFile, clusterDistance, shouldColorStops) {
-	console.log("start");
     var deferredStop = LoadCSV(stopsFile);
     var deferredTime = LoadCSV(timesFile);
     var deferredTrips = LoadCSV(tripsFile);
@@ -48,7 +47,6 @@ function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFi
 		var deferredFreq = LoadCSV(freqFile);
 	else
 		var deferredFreq = null;
-	console.log("got here");
     if (clusterDistance) {
         if (clusterDistance <= 0)
             clusterRadius = 1;
@@ -64,7 +62,6 @@ function LoadGTFSFeed(map, stopsFile, timesFile, tripsFile, shapesFile, routesFi
 
 // Given deferred objects to return the indicated CSV files, populates the map
 function LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq) {
-	console.log("here");
 
     $.when(deferredStop, deferredTime, deferredTrips, deferredShapes, deferredRoute, deferredCalender, deferredDates, deferredFreq).then(function(stopCsv, timesCsv, tripCsv, shapeCsv, routeCsv, calenderCsv, datesCsv, freqCsv) {
         // Convert the csv data into arrays of objects using jquery-csv
@@ -483,7 +480,7 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
                             if (trip.direction_id === '1') {
                                 if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
                                     freqByTrip[time.trip_id].forEach(function(freq) {
-                                        direction1String += generateFreqItem(freq);
+                                        direction1String += generateFreqItem(freq, asteriskStrings[dropOffTypesSeen.indexOf(time.pickup_type)]);
                                     });
                                     freqTripsShown[time.trip_id] = "";
                                 } else {
@@ -495,7 +492,7 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
                             } else {
                                 if (freqByTrip && freqByTrip[time.trip_id] && !freqTripsShown[time.trip_id]) {
                                     freqByTrip[time.trip_id].forEach(function(freq) {
-                                        direction0String += generateFreqItem(freq);
+                                        direction0String += generateFreqItem(freq, asteriskStrings[dropOffTypesSeen.indexOf(time.pickup_type)]);
                                     });
                                     freqTripsShown[time.trip_id] = "";
                                 } else {
@@ -558,7 +555,10 @@ function pickMarkerIcon(routeType) {
 
 //Generate HTML for list items in popup
 function generateFreqItem(freq, optionalStr) {
-    return "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) + optionalStr ? optionalStr : '' + "</li>";
+	if (optionalStr)
+		return "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) + optionalStr +  "</li>";
+	else
+		return "<li>Every " + parseHeadwaySecs(freq.headway_secs) + " from " + parseTime(freq.start_time) + " to " + parseTime(freq.end_time) +  "</li>";
 }
 
 function generateTimeItem(time, optionalStr) {
