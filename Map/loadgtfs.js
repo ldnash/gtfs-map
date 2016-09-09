@@ -418,6 +418,8 @@ function addStopMarkers(map, stopData, stopsByParent, timeData, tripById, runnin
                     var headsign0 = "";
                     var direction1String = "";
                     var headsign1 = "";
+					
+
 
                     var dropOffTypesSeen = [];
                     var warnings = [];
