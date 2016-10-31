@@ -202,7 +202,7 @@ function LoadGTFS(map, deferredStop, deferredTime, deferredTrips, deferredShapes
                 div.innerHTML += '<table><tr>' + '<td style="padding:10px"><img src="legendmarker.png"' + 
                     '" alt="Transit Stop Icon"/></td>' + '<td><p style="{float: right}">Transit Stop</p></td></tr>' +
                     '<tr><td style="padding:10px"><hr style="border-style: solid; border-width: 2px; border-color :' + lineColor + ';"></td><td><p>Route<\p></td>' + '</tr>'
-					+ '</table><p style="padding:10px;display:none;" id="noTripAlert">No trips scheduled for selected date</p>';
+					+ '</table><b style="padding:10px;display:none;font-size:20px;" id="noTripAlert">No trips scheduled for selected date</b>';
                 return div;
             }
             legend.addTo(map);
